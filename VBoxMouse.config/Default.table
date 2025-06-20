@@ -1,0 +1,21 @@
+"Title" = "VirtualBox Mouse Driver";
+"Bus Type" = "PCI";
+"Family" = "Pointing Device";
+"Version" = "0.9";
+"Class Names" = "VBoxMouse";
+"Server Name" = "VBoxMouse";
+"Auto Detect IDs" = "0xcafe80ee";
+"Instance" = "0";
+"Driver Name" = "VBoxMouse";
+"DMA Channels" = "";
+"IRQ Levels" = "11";
+"Share IRQ Levels" = "YES";
+"I/O Ports" = "";
+"Memory Maps" = "";
+
+"X Offset" = "0";
+"Y Offset" = "0";
+"X Size" = "1680";
+"Y Size" = "1050";
+
+"Server Name" = "VBoxMouse";
