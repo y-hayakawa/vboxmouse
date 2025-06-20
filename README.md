@@ -7,4 +7,4 @@ For the display adapter, Vittorio Carosa’s VBoxVideo is publicly available(htt
 
 On the other hand, when using VirtualBox’s PS/2 mouse emulation with NextSTEP, pointer movements feel clumsy, and combining it with the host key is also awkward. That’s why I decided to create a dedicated mouse driver.
 
-It’s still only at a “just about working” stage, but I’ve chosen to release it for NextSTEP enthusiasts. The code may be rough and incomplete, but I hope that anyone with expertise will help improve it further.
+It’s still only at a “just about working” stage, but I’ve chosen to release it for NEXTSTEP enthusiasts. The code may be rough and incomplete, but I hope that anyone with expertise will help improve it further.
