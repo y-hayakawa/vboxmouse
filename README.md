@@ -24,3 +24,10 @@ NEXTSTEP’s Mouse Speed preference will have no effect. All pointer speed and a
 ### TODO
 I don’t yet know how the driver can detect when the guest OS’s screen size changes. I tried using the VirtualBox MMIO–based protocol, but it didn’t work correctly.
 At present, on every mouse event the driver falls back to using the Bochs VBE Extensions to read the screen size via I/O ports—which is extremely inefficient.
+
+### References and Acknowledgments
+
+- This software is a simple adaptation of VMMouse (the VMware mouse driver) by Jens Heise, updated for recent versions of VirtualBox.  
+- [VirtualBox Video Driver](https://github.com/vcarosadev/VBoxVideo) by Vittorio Carosa  
+- [VirtualBox Guest Additions](https://wiki.osdev.org/VirtualBox_Guest_Additions)  
+- Various resources archived at <https://nextcomputers.org>
