@@ -9,20 +9,44 @@
 
 \fs36 \
 
-\pard\tx800\tx1600\tx2400\tx3200\tx4000\tx4800\tx5600\tx6400\tx7200\tx8000\fs24\fc0\cf0 This driver is tested and works on 
-\b NEXTSTEP 3.3
-\b0  for Intel.\
+\pard\tx800\tx1600\tx2400\tx3200\tx4000\tx4800\tx5600\tx6400\tx7200\tx8000\fs24\fc0\cf0 VirtualBox guest addition mouse driver for NEXTSTEP 3.3 (Intel).\
+\
+ There are very few NEXTSTEP-specific drivers developed for VirtualBox, and no Guest Additions are available. For the display adapter, Vittorio Carosa¡Çs VBoxVideo is publicly available(https://github.com/vcarosadev/VBoxVideo), and it¡Çs been extremely useful.\
+\
+On the other hand, when using VirtualBox's PS/2 mouse emulation with NextSTEP, pointer movements feel clumsy, and combining it with the host key is also awkward. That¡Çs why I decided to create a dedicated mouse driver.\
+\
+It¡Çs still only at a ¡Èjust about working¡É stage, but I¡Çve chosen to release it for NEXTSTEP enthusiasts. The code may be rough and incomplete, but I hope that anyone with expertise will help improve it further.\
 
 \b\fs36 \
-Settings\
+Installation \
 
-\b0\fs24 In Mouse Preference, setting for mouse speed is ignored. Instead, you can change the properties of mouce in the host OS.\
+\b0\fs24 \
+- Double-click VBoxMouse.config to copy the driver files into their proper locations.\
+- Launch Configure.app (in /NextAdmin), go to Mouse settings, and add ¡ÈVirtualBox Mouse Driver¡É to enable it.\
+- Reboot your system¡½upon restart, the new driver will be active.\
+\
+
+\b\fs28 Note:
+\b0\fs24 \
+NEXTSTEPÇs Mouse Speed preference will have no effect. All pointer speed and acceleration are governed by the host OS, not by NEXTSTEP.\
 
 \pard\tx960\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\fc0\cf0 \
 
-\pard\tx800\tx1600\tx2400\tx3200\tx4000\tx4800\tx5600\tx6400\tx7200\tx8000\b\fs36\fc0\cf0 Acknowlegement\
+\pard\tx800\tx1600\tx2400\tx3200\tx4000\tx4800\tx5600\tx6400\tx7200\tx8000\b\fs36\fc0\cf0 Todo\
 
 \b0\fs24 \
+I don¡Çt yet know how the driver can detect when the guest OS¡Çs screen size changes. I tried using the VirtualBox MMIO?based protocol, but it didn¡Çt work correctly.\
+At present, on every mouse event the driver falls back to using the Bochs VBE Extensions to read the screen size via I/O ports¡½which is extremely inefficient.\
+\
+
+\b\fs36 References and cknowlegement
+\b0\fs24 \
+\
+- This software is a simple adaptation of VMMouse (the VMware mouse driver) by Jens Heise, updated for recent versions of VirtualBox.  \
+- [VirtualBox Video Driver](https://github.com/vcarosadev/VBoxVideo) by Vittorio Carosa  \
+- [VirtualBox Guest Additions](https://wiki.osdev.org/VirtualBox_Guest_Additions)  \
+- Various resources archived at <https://nextcomputers.org>\
+\
 
 \pard\tx960\tx1920\tx2880\tx3840\tx4800\tx5760\tx6720\tx7680\tx8640\tx9600\fc0\cf0 \
 
