@@ -18,8 +18,7 @@ It’s still only at a “just about working” stage, but I’ve chosen to rele
 
 - Reboot your system—upon restart, the new driver will be active.
 
-Note:
-
+Note:\
 NEXTSTEP’s Mouse Speed preference will have no effect. All pointer speed and acceleration are governed by the host OS, not by NEXTSTEP.
 
 ### TODO
