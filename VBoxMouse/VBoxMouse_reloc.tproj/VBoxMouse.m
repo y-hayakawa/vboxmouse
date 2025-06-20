@@ -30,7 +30,7 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
   IOReturn configReturn;			       // Return value from getPCIConfigSpace
 
   IOLog("VBoxMouse - VirtualBox Mouse Adapter Driver\n");
-  IOLog("VBoxMouse - Version 1.0 (built on %s at %s)\n", __DATE__, __TIME__);
+  IOLog("VBoxMouse - Version 0.9 (built on %s at %s)\n", __DATE__, __TIME__);
 
   // Get the PCI configuration
   configReturn = [VBoxMouse getPCIConfigSpace: &pciConfig withDeviceDescription: deviceDescription];
