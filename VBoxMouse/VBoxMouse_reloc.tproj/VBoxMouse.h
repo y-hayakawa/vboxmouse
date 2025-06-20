@@ -2,7 +2,7 @@
   VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
   (c) 2025, Yoshinori Hayakawa
 
-  Version 0.9 (2025-06-20)
+  Version 0.91 (2025-06-20)
 */
 
 #ifndef __VBOXMOUSE_H__
@@ -17,6 +17,14 @@
 #undef DRIVER_PRIVATE
 
 #import <driverkit/i386/IOPCIDirectDevice.h>
+
+struct rect {
+  short   x;
+  short   y;
+  short   width;
+  short   height;
+  id lock ;
+} ;
  
 @interface VBoxMouse : PCPointer {
   struct vbox_mouse_absolute_ex *vbox_mouse;
@@ -45,18 +53,12 @@
   IOEISAPortAddress vbox_port ;
 
   @private
-  struct {
-    short   x;
-    short   y;
-    short   width;
-    short   height;
-  } desktopBounds;      
+  struct rect desktopBounds;      
 }
 
 - (BOOL)mouseInit: deviceDescription;
 - free;
 - (void)interruptOccurred;
-
 - (BOOL)readConfigTable:configTable;
 
 @end

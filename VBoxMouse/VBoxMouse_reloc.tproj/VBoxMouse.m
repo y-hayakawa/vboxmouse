@@ -2,7 +2,7 @@
   VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
   (c) 2025, Yoshinori Hayakawa
 
-  Version 0.9 (2025-06-20)
+  Version 0.91 (2025-06-20)
 */
 
 #include <stdio.h>
@@ -23,6 +23,19 @@
 IOPCIConfigSpace pciConfig;				// PCI Configuration
 
 @implementation VBoxMouse
+
+static void timer_callback(struct rect *rect) {
+    unsigned short width,height ;
+    outw(0x01CE,0x01) ; // XRES
+    width = inw(0x01CF) ;
+    outw(0x01CE,0x02) ; // YRES
+    height = inw(0x01CF) ;
+    [rect->lock lock] ;
+    rect->width = width ;
+    rect->height = height ;
+    [rect->lock unlock] ;
+    IOScheduleFunc((IOThreadFunc)timer_callback, (void *) rect, 1) ; // 1 sec
+}
 
 - (BOOL)mouseInit: deviceDescription {
   IOReturn ret ;
@@ -266,8 +279,12 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
     IOLog("thread error\n") ;
     return NO ;
   }
+  
+  desktopBounds.lock = [NXLock new] ;
 
   [self readConfigTable:[deviceDescription configTable]];
+
+  IOScheduleFunc((IOThreadFunc) timer_callback, &desktopBounds,1) ;
 
   IOLog ("VBoxMouse - Initialization successfully done\n");
 
@@ -276,6 +293,12 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
 
 - free {
 	IOLog("VBoxMouse - Cleaning up\n");
+
+	[desktopBounds.lock unlock] ;
+
+	IOUnscheduleFunc((IOThreadFunc)timer_callback, &desktopBounds) ;
+
+	[desktopBounds.lock free] ;
 
 	IOFree(vbox_mouse, sizeof(struct vbox_mouse_absolute_ex));
 	IOFree(guest_info, sizeof(struct vbox_guest_info));
@@ -317,25 +340,12 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
     outl(vbox_port, vbox_display_change2_phys);
 
     if (vbox_display_change2->xres != 0 && vbox_display_change2->yres != 0) {
+      [desktopBounds.lock lock] ;
       desktopBounds.width = vbox_display_change2->xres ;
       desktopBounds.height = vbox_display_change2->yres ;
+      [desktopBounds.lock unlock] ;
       IOLog("display size has changed: %ld %ld\n", vbox_display_change2->xres,vbox_display_change2->yres) ;
     }
-  } else {
-#if 1
-    // obtaining current display size via Bochs VBE Extensions
-    // Since this is very inefficient, you can directly write your screen size in Instance0.table
-    // and skip this part, if you need smoother cursor movement.
-    unsigned short width,height ;
-    outw(0x01CE,0x01) ; // XRES
-    width = inw(0x01CF) ;
-    outw(0x01CE,0x02) ; // YRES
-    height = inw(0x01CF) ;
-
-    desktopBounds.width = width ;
-    desktopBounds.height = height ;
-#endif
-     ;
   }
 
   vbox_mouse->header.size = sizeof(struct vbox_mouse_absolute_ex) ;
@@ -351,8 +361,10 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
   outl(vbox_port, vbox_mouse_phys);
 
   if (target != nil) {
+    [desktopBounds.lock lock] ;
     vbox_mouse->x = (vbox_mouse->x * desktopBounds.width / 65535) + desktopBounds.x ;
     vbox_mouse->y = (vbox_mouse->y * desktopBounds.height / 65535) + desktopBounds.y ;
+    [desktopBounds.lock unlock] ;
     [target processVBoxMouseInput: vbox_mouse] ; // target is defined in PCPointer.h
   }
 
@@ -368,7 +380,7 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
     
     if (!configTable)
 	return NO;
-    
+    [desktopBounds.lock lock] ;
     if ((value = (char*)[configTable valueForStringKey:VBM_XOFFSET]) != NULL)
     {
 	desktopBounds.x = PCPatoi(value);
@@ -396,13 +408,13 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
 	[configTable freeString:value];
     }
     else desktopBounds.height = VBM_DEF_YSIZE;
+    [desktopBounds.lock unlock] ;
 
     IOLog("config: w=%ld h=%d xofs=%d yofs=%d\n",desktopBounds.width,desktopBounds.height,desktopBounds.x,desktopBounds.y) ;
     
     return success;
 }
 
+
+
 @end
-
-
-
