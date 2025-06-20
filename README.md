@@ -10,6 +10,18 @@ On the other hand, when using VirtualBox’s PS/2 mouse emulation with NextSTEP,
 It’s still only at a “just about working” stage, but I’ve chosen to release it for NEXTSTEP enthusiasts. The code may be rough and incomplete, but I hope that anyone with expertise will help improve it further.
 
 
-## Todo or challenges
+### Installation 
+
+- Double-click VBoxMouse.config to copy the driver files into their proper locations.
+
+- Launch Configure.app (in /NextAdmin), go to Mouse settings, and add “VirtualBox Mouse Driver” to enable it.
+
+- Reboot your system—upon restart, the new driver will be active.
+
+Note:
+
+NEXTSTEP’s Mouse Speed preference will have no effect. All pointer speed and acceleration are governed by the host OS, not by NEXTSTEP.
+
+### TODO
 I don’t yet know how the driver can detect when the guest OS’s screen size changes. I tried using the VirtualBox MMIO–based protocol, but it didn’t work correctly.
 At present, on every mouse event the driver falls back to using the Bochs VBE Extensions to read the screen size via I/O ports—which is extremely inefficient.
