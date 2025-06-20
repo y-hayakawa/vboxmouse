@@ -306,7 +306,7 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
     return ;
   }
 
-  // Todo: I wanted to receive an event only when the screen size changes, but now working...
+  // Todo: I wanted to receive an event only when the screen size changes, but not working...
   if (events & (1<<2)) { // VMMDEV_EVENT_DISPLAY_CHANGE_REQUEST
     vbox_display_change2->header.size = sizeof(struct vbox_display_change2) ;
     vbox_display_change2->header.version = VBOX_REQUEST_HEADER_VERSION;
