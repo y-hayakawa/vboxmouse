@@ -30,7 +30,7 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
   IOReturn configReturn;			       // Return value from getPCIConfigSpace
 
   IOLog("VBoxMouse - VirtualBox Mouse Adapter Driver\n");
-  IOLog("VBoxMouse - Version 0.9 (built on %s at %s)\n", __DATE__, __TIME__);
+  IOLog("VBoxMouse - Version 0.91 (built on %s at %s)\n", __DATE__, __TIME__);
 
   // Get the PCI configuration
   configReturn = [VBoxMouse getPCIConfigSpace: &pciConfig withDeviceDescription: deviceDescription];
@@ -292,18 +292,18 @@ IOPCIConfigSpace pciConfig;				// PCI Configuration
 {
   unsigned long events = 0 ;
 
-  if (vbox_vmmdev[2]) {
+  if (vbox_vmmdev[2]==0) {
+    [self enableAllInterrupts] ;
+    return ;
+  }
+
+  if (vbox_vmmdev[1]==1) { // VERSION 1.04
+    events = inl(vbox_port+8) ;  // 8:VMMDEV_PORT_OFF_REQUEST_FAST
+  } else {
     events = vbox_vmmdev[2] ;
     vbox_ack->header.rc = -1 ;
     vbox_ack->events = events ;
     outl(vbox_port, vbox_ack_phys) ;
-  } else {
-    events = inl(vbox_port+8) ;  // 8:VMMDEV_PORT_OFF_REQUEST_FAST
-  }
-
-  if (!events) {
-    [self enableAllInterrupts] ;
-    return ;
   }
 
   // Todo: I wanted to receive an event only when the screen size changes, but not working...
