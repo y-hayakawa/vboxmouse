@@ -58,6 +58,8 @@ To run it in the background, use the -d option:
 
 > pasteboard_daemon -d
 
+Since PBDaemon relies on the WindowServer, it must be launched after the user has logged into the graphical environment.
+
 #### VirtualBox Settings
 
 Make sure to enable bidirectional clipboard sharing in the VirtualBox menu:
