@@ -1,7 +1,7 @@
 "Title" = "VirtualBox Mouse Adapter";
 "Bus Type" = "PCI";
 "Family" = "Pointing Device";
-"Version" = "0.91";
+"Version" = "0.92";
 "Class Names" = "VBoxMouse";
 "Server Name" = "VBoxMouse";
 "Auto Detect IDs" = "0xcafe80ee";
@@ -12,6 +12,7 @@
 "Share IRQ Levels" = "YES";
 "I/O Ports" = "";
 "Memory Maps" = "";
+"Character Major" = "21" ;
 
 "X Offset" = "0";
 "Y Offset" = "0";

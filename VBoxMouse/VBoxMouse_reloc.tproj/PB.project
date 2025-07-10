@@ -1,10 +1,11 @@
 DOCICONFILES = ();
 FILESTABLE = {
     OTHER_SOURCES = (Makefile.preamble, Makefile, Makefile.postamble, Makefile.driver_preamble, Load_Commands.sect);
-    H_FILES = (EventSrcPCPointer.h, PCPointer.h, PCPointerDefs.h, VBoxDefines.h, VBoxMouse.h, VBoxMousePointer.h);
+    M_FILES = (pb_unixio.m);
+    C_FILES = ();
+    H_FILES = (EventSrcPCPointer.h, PCPointer.h, PCPointerDefs.h, VBMouseConfig.h, VBoxDefines.h, VBoxMouse.h, VBoxMousePointer.h);
     OTHER_LINKED = ();
     CLASSES = (VBoxMouse.m, VBoxMousePointer.m);
-    C_FILES = ();
 };
 LOCALIZABLE_FILES = {
 };

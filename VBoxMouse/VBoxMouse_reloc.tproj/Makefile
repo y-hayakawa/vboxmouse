@@ -10,12 +10,16 @@
 NAME = VBoxMouse_reloc
 
 PROJECTVERSION = 1.1
+JAPANESE = YES
+
 LANGUAGE = Japanese
 
 CLASSES = VBoxMouse.m VBoxMousePointer.m
 
-HFILES = EventSrcPCPointer.h PCPointer.h PCPointerDefs.h VBoxDefines.h\
-         VBoxMouse.h VBoxMousePointer.h
+HFILES = EventSrcPCPointer.h PCPointer.h PCPointerDefs.h\
+         VBMouseConfig.h VBoxDefines.h VBoxMouse.h VBoxMousePointer.h
+
+MFILES = pb_unixio.m
 
 OTHERSRCS = Makefile.preamble Makefile Makefile.postamble\
             Makefile.driver_preamble Load_Commands.sect
