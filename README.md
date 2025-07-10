@@ -32,9 +32,9 @@ Additionally, you must create a character device file to enable communication be
 Run the following commands in the terminal:
 ```
 $ su
-$ cd /private/dev
-$ mknod vboxpb c 21 0  
-$ chmod 666 vboxpb
+# cd /private/dev
+# mknod vboxpb c 21 0  
+# chmod 666 vboxpb
 ```
 If you are updating from an older version of the VBoxMouse driver, you also need to manually edit the configuration file:
 
