@@ -21,9 +21,53 @@ It’s still only at a “just about working” stage, but I’ve chosen to rele
 Note:\
 NEXTSTEP’s Mouse Speed preference will have no effect. All pointer speed and acceleration are governed by the host OS, not by NEXTSTEP.
 
-### TODO
-I don’t yet know how the driver can detect when the guest OS’s screen size changes. I tried using the VirtualBox MMIO–based protocol, but it didn’t work correctly.
-At present, on every mouse event the driver falls back to using the Bochs VBE Extensions to read the screen size via I/O ports—which is extremely inefficient.
+### Clipboard Sharing (since v0.92)
+
+Starting from version 0.92, support for clipboard (pasteboard) sharing has been added. To use this feature, you need:
+
+- The VBoxMouse driver, and
+- A background program called pasteboard_daemon (PBDaemon)
+
+Additionally, you must create a character device file to enable communication between the daemon and the driver.
+Run the following commands in the terminal:
+```
+$ su
+$ cd /private/dev
+$ mknod vboxpb c 21 0  
+$ chmod 666 vboxpb
+```
+If you are updating from an older version of the VBoxMouse driver, you also need to manually edit the configuration file:
+
+> /private/Devices/VBoxMouse.config/Instance0.table
+
+Add the following line (using a text editor):
+
+> "Character Major" = "21" ;
+
+This allows data exchange via the character device /dev/vboxpb using major number 21.
+
+#### PBDaemon 
+
+To enable clipboard sharing, you must first start the PBDaemon (pasteboard_daemon).
+You can build the program by downloading the contents of the PBDaemon folder in this repository and running make. This will generate an executable called pasteboard_daemon.
+To start the daemon, run the following command in the terminal:
+
+> pasteboard_daemon
+
+To run it in the background, use the -d option:
+
+> pasteboard_daemon -d
+
+#### VirtualBox Settings
+
+Make sure to enable bidirectional clipboard sharing in the VirtualBox menu:
+
+Devices → Shared Clipboard → Bidirectional
+
+#### ⚠️Notes
+
+- Only plain text (UNICODE) data is supported.
+- The maximum size of transferable text is approximately 32,000 characters.
 
 ### References and Acknowledgments
 
