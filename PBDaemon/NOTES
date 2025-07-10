@@ -1,0 +1,5 @@
+# HOW TO MAKE A DEVICE NODE for VBoxMouse Driver
+su
+cd /private/dev
+mknod vboxpb c 21 0  
+chmod 666 vboxpb
