@@ -3,3 +3,10 @@ su
 cd /private/dev
 mknod vboxpb c 21 0  
 chmod 666 vboxpb
+
+
+# Checklist for PDdaemon Operation
+1. Is the version of VBoxMouse 0.92 or later?
+2. Does the file /private/Drivers/VBoxMouse.config/Instance0.table contain the line "Character Major" = "21";?
+3. Has the character device /private/dev/vboxpb been created with major number 21?
+4. Is bidirectional clipboard sharing enabled in the VirtualBox device settings?
