@@ -39,13 +39,13 @@ int pb_read(dev_t dev, struct uio *uiop, int ioflag)
     [pbData.lock lock] ;
     len_copy = MIN(pbData.pb_read_buffer_len, uiop->uio_iov->iov_len) ;
     ret = copyout(pbData.pb_read_buffer, uiop->uio_iov->iov_base, len_copy);
-    [pbData.lock unlock] ;
 #ifdef DEBUG
     IOLog("pb_read: ret=%d len_copy=%d\n",ret,len_copy) ;
 #endif
     uiop->uio_iov->iov_base = (char *)uiop->uio_iov->iov_base + len_copy;
     uiop->uio_iov->iov_len -= len_copy;
     uiop->uio_resid -= len_copy ;
+    [pbData.lock unlock] ;
     return ret ;
 }
 

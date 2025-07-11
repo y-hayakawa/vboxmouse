@@ -776,7 +776,7 @@ static void pb_thread(struct pb_data *data) {
             hgcm_call->params[0].type = 1 ;        // 32bit value
             hgcm_call->params[0].value0 = msg_fmt ; // UNICODETEXT   
             hgcm_call->params[0].value1 = 0 ;
-            hgcm_call->params[1].type = 10 ;        // 3:phys addrr(deprecated), 10:page list
+            hgcm_call->params[1].type = 12 ;        // 3:phys addrr(deprecated), 10:page list  12:contiguous pagelist
             hgcm_call->params[1].value0 = MAX_BUFFER_LEN ;   
             hgcm_call->params[1].value1 = PAGE_LIST_INFO_OFFSET32 ;
             hgcm_call->params[2].type = 1 ;        // 32bit value
@@ -796,19 +796,22 @@ static void pb_thread(struct pb_data *data) {
                   hgcm_call->header.header.rc, hgcm_call->header.result, 
                   hgcm_call->params[0].value0, hgcm_call->params[1].value0, hgcm_call->params[2].value0,cnt) ;
 #endif
+
             if (hgcm_call->header.header.rc < 0) continue ;
 
             if (hgcm_call->params[0].value0 != (1<<0)) continue ; // skip data other than UNICODETEXT
 
             len = hgcm_call->params[2].value0 ;  // actual data length
-            if (len == 0 || len>MAX_BUFFER_LEN) {
+            if (len == 0) {
                 data->pb_read_buffer_len = 0 ; 
-                continue ;  // skip very large data
+                continue ; 
+            } else if (len>=MAX_BUFFER_LEN) {
+                len = MAX_BUFFER_LEN-2 ; 
             }
-
             [data->lock lock] ;
 #ifdef DEBUG
             IOLog("pb_thread: got PB data (%d bytes)\n",len) ;
+            }
 #endif
             data->pb_read_buffer_len = len ;
             data->count += 1 ;
@@ -855,7 +858,7 @@ static void pb_thread(struct pb_data *data) {
                 hgcm_call->params[0].type = 1 ;        // 32bit value
                 hgcm_call->params[0].value0 = (1<<0) ; // UNICODE TEXT
                 hgcm_call->params[0].value1 = 0 ;
-                hgcm_call->params[1].type = 10 ;        // 3:phys addr(deprecated), 10:page list
+                hgcm_call->params[1].type = 12 ;        // 3:phys addr(deprecated), 10:page list  12:contiguous page list
                 hgcm_call->params[1].value0 = data->pb_write_buffer_len ;
                 hgcm_call->params[1].value1 = PAGE_LIST_INFO_OFFSET32 ;
                 hgcm_call->page_list_info.flags = 3 ;

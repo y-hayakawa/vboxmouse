@@ -78,7 +78,7 @@ static const IOParameterName kClipboardParam = "VBoxClipboardData";
               vboxBufferLength = param_buf[1] ;
               NSLog(@"PBDaemon - Buffer length=%d\n",vboxBufferLength) ;
           } else {
-              NSLog(@"PBDaemon - VBoxMouse driver seems not working properly\n") ;
+              NSLog(@"PBDaemon - VBoxMouse driver seems not working properly %d\n",param_buf[1]) ;
               exit(1) ;
           }
       } else {
@@ -189,11 +189,8 @@ static const IOParameterName kClipboardParam = "VBoxClipboardData";
             if (inbuf_len < 0) {
                 NSLog(@"PBDaemon - Error while reading data errno=%d\n",errno) ;
             } 
-            if (inbuf_len > 0 && inbuf_len < vboxBufferLength) {
+            if (inbuf_len > 0 && inbuf_len <= vboxBufferLength) {
                 int res = 0 ;
-#ifdef DEBUG
-                fprintf(stderr,"GOT %ld bytes\n",inbuf_len) ;
-#endif
                 if (kanjiMode==MODE_UTF8) { 
                     res = utf8_to_eucjp(inbuf, inbuf_len, &outbuf, &outbuf_len) ;
                 } else if (kanjiMode==MODE_UTF16LE) {
@@ -204,7 +201,11 @@ static const IOParameterName kClipboardParam = "VBoxClipboardData";
                     strncpy(outbuf,inbuf,inbuf_len) ;
                 }
                 // delete null at the tail
-                if (outbuf[outbuf_len-1]==0) outbuf_len-- ;
+                while (outbuf_len>0 && outbuf[outbuf_len-1]==0) outbuf_len-- ;
+
+#ifdef DEBUG
+                fprintf(stderr,"res=%d outbuf_len= %ld\n",res,outbuf_len) ;
+#endif
 
                 NX_DURING
                     [pboard declareTypes:&NXAsciiPboardType num:1 owner:self];
@@ -233,7 +234,8 @@ static void usage(const char *prog) {
 	  "Usage: %s [ -u8 | -u16 | -d]\n"
 	  "  -u8      VirtualBox host uses UTF-8\n"
 	  "  -u16     VirtualBox host uses UTF-16LE(default)\n"
-	  "  -d       Daemonize\n",          
+	  "  -d       Daemonize\n"
+      "  -w n     wait n sec\n",
 	  prog);
   exit(1);
 }
@@ -248,16 +250,21 @@ int main(int argc, char *argv[]) {
     size_t out_buf_len;
     int r ;
     int daemon_mode = 0 ;
+    int idle_time = 0 ;
   
-    while ((opt = getopt(argc, argv, "u:d")) != -1) {
+    while ((opt = getopt(argc, argv, "u:dw:")) != -1) {
         switch (opt) {
         case 'u':
             if (strcmp(optarg, "8") == 0)       kanji_mode = MODE_UTF8;
             else if (strcmp(optarg, "16") == 0) kanji_mode = MODE_UTF16LE;
+            else if (strcmp(optarg, "0") == 0)  kanji_mode = MODE_NONE;
             else usage(argv[0]);
             break;
         case 'd':
             daemon_mode = 1;
+            break;
+        case 'w':
+            idle_time = atoi(optarg) ;
             break;
         default:
             usage(argv[0]);
@@ -285,6 +292,8 @@ int main(int argc, char *argv[]) {
         close(1);
         close(2);
     }
+
+    sleep(idle_time) ;
 
     daemon = [[PasteboardDaemon new] retain];
 
