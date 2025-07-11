@@ -64,7 +64,7 @@ static const IOParameterName kClipboardParam = "VBoxClipboardData";
   pboard = [[Pasteboard new] retain];
   [pboard declareTypes:&NXAsciiPboardType num:1 owner:self];
   lastCountNS = [pboard changeCount];
-  lastCountVB = -1 ;
+  lastCountVB = 0 ;
 
   len=2 ;
   ret = [master getIntValues:param_buf
