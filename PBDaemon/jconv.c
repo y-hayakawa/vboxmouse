@@ -105,7 +105,7 @@ int utf16le_to_eucjp(const unsigned char *input, size_t in_bytes,
             /* JIS X 0208 第1・2水準 */
             uint8_t b1, b2;
             if (lookup_eucjp(cp, &b1, &b2) < 0) {
-                if (o + 1 > est) { free(buf); return EINVAL; }
+                if (o + 2 > est) { free(buf); return EINVAL; }
                 buf[o++] = 0xA1;
                 buf[o++] = 0xA1;
             } else {
