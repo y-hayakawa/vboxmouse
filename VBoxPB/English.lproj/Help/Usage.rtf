@@ -1,0 +1,48 @@
+{\rtf0\ansi{\fonttbl\f2\fswiss Helvetica;\f3\fmodern Courier;\f1\fnil FixedGothicBBBCourier;}
+\paperw11440
+\paperh9600
+\margl120
+\margr120
+\pard\tx520\tx1060\tx1600\tx2120\tx2660\tx3200\tx3720\tx4260\tx4800\tx5320\f2\b\i0\ulnone\fs36\fc0\cf0 Usage
+\b0\fs24 \
+\
+Using VBoxPB is very simple¡¡just launch the application and leave it running.\
+\
+When started, a small window will appear displaying messages such as:\
+\
+
+\f3 Starting VBoxPB...\
+Buffer length=65536\
+kanjiMode=3\
+\
+
+\f2 If you see this, the application is running correctly.\
+\
+
+\b\fs32 Clipboard Sharing
+\b0\fs24 \
+\
+Only plain text can be shared via the clipboard (pasteboard). Japanese Kanji (EUC) is supported.\
+\
+The maximum transferable length is approximately 32,000 characters.\
+\
+If the host OS places text longer than this limit onto the clipboard, the guest OS (NEXTSTEP) will not receive the data.\
+\
+Similarly, if a long text is copied in NEXTSTEP, the data will be truncated at the limit before being sent to the host.\
+\
+
+\b\fs32 Background Operation
+\b0\fs24 \
+\
+Once you confirm that VBoxPB is working correctly, you can select "Hide" from the menu to hide the window. Do not select "Quit", as this will close the application.\
+\
+
+\b\fs32 Auto-Launch at Login
+\b0\fs24 \
+\
+For convenience, you can configure VBoxPB to launch automatically when you log in.\
+Add VBoxPB to your Dock. Then, in Workspace Preferences, under Dock settings, add VBoxPB so that it starts automatically at login.\
+\
+\
+
+}

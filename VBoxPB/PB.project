@@ -1,0 +1,27 @@
+INSTALLDIR = "$(HOME)/Apps";
+APPICON = VBoxPB.tiff;
+GENERATEMAIN = YES;
+DOCICONFILES = ();
+FILESTABLE = {
+    C_FILES = (jconv.c);
+    OTHER_LIBS = (Driver, Foundation_s, Indexing_s, Media_s, NeXT_s);
+    CLASSES = (VBoxPB.m);
+    OTHER_SOURCES = (Makefile);
+    INTERFACES = (Info.nib, VBoxPB.nib);
+    H_FILES = (jconv.h, VBoxPB.h);
+    IMAGES = (hayakawa.tiff, VBoxPB.tiff);
+    OTHER_LINKED = ();
+    M_FILES = (VBoxPB_main.m);
+};
+APPCLASS = Application;
+MAINNIB = VBoxPB;
+DOCEXTENSIONS = ();
+PROJECTTYPE = Application;
+PROJECTVERSION = 1.1;
+LOCALIZABLE_FILES = {
+    VBoxPB.nib;
+    Info.nib;
+};
+PROJECTNAME = VBoxPB;
+SYSTEMEXTENSIONS = ();
+LANGUAGE = English;
