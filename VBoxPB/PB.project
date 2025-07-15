@@ -5,11 +5,11 @@ DOCICONFILES = ();
 FILESTABLE = {
     C_FILES = (jconv.c);
     OTHER_LIBS = (Driver, Foundation_s, Indexing_s, Media_s, NeXT_s);
-    CLASSES = (VBoxPB.m);
+    CLASSES = (IconView.m, VBoxPB.m);
     OTHER_SOURCES = (Makefile);
     INTERFACES = (Info.nib, VBoxPB.nib);
-    H_FILES = (jconv.h, VBoxPB.h);
-    IMAGES = (hayakawa.tiff, VBoxPB.tiff);
+    H_FILES = (IconView.h, jconv.h, VBoxPB.h);
+    IMAGES = (altVBoxPB.tiff, hayakawa.tiff, VBoxPB.tiff);
     OTHER_LINKED = ();
     M_FILES = (VBoxPB_main.m);
 };

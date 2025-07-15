@@ -10,18 +10,18 @@
 NAME = VBoxPB
 
 PROJECTVERSION = 1.1
-JAPANESE = NO
+JAPANESE = YES
 
 LANGUAGE = English
 
 APPICON = VBoxPB.tiff
 LOCAL_RESOURCES = Info.nib VBoxPB.nib
 
-GLOBAL_RESOURCES = hayakawa.tiff VBoxPB.tiff
+GLOBAL_RESOURCES = altVBoxPB.tiff hayakawa.tiff VBoxPB.tiff
 
-CLASSES = VBoxPB.m
+CLASSES = IconView.m VBoxPB.m
 
-HFILES = jconv.h VBoxPB.h
+HFILES = IconView.h jconv.h VBoxPB.h
 
 MFILES = VBoxPB_main.m
 

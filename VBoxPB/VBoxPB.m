@@ -26,7 +26,7 @@ static const IOParameterName kClipboardParam = "VBoxClipboardData";
 #define VBOXPB_DEV_PATH "/dev/vboxpb"
 
 #import "VBoxPB.h"
-#import "PrefsController.h"
+#import "IconView.h"
 
 @implementation VBoxPB
 
@@ -269,17 +269,52 @@ void pb_handler(DPSTimedEntry teNumber, double now, void *data) {
 
 @end
 
-
+#define BORDER 8
 
 @implementation VBoxPB(ApplicationDelegate)
 - appDidInit:sender
 {
+    Window *appIcon ;
+    IconView *iconView ;
+    NXRect appIconFrame;
+    NXRect iconViewRect;
+    NXImage *altIconImage ;
     id ret ;
     [self initStatusScrollView] ;
     ret = [self connect] ;
     if (ret != nil) {
         [self setMode:MODE_UTF16LE];
         [self startTE:self];
+
+        altIconImage = [NXImage findImageNamed:"altVBoxPB"] ;
+        if (!altIconImage) {
+            PRINT_LOG(self,"Failed to load icon TIFF\n");
+            return self;
+        }
+
+        appIcon = [NXApp appIcon] ;
+        [appIcon getFrame:&appIconFrame];
+
+        [Window getContentRect:&iconViewRect
+                forFrameRect:&appIconFrame
+                style:[appIcon style]];
+
+	NX_X(&iconViewRect) = BORDER;
+	NX_Y(&iconViewRect) = BORDER;
+	NX_WIDTH(&iconViewRect) -= BORDER * 2;
+	NX_HEIGHT(&iconViewRect) -= BORDER * 2;
+
+        iconView = [[IconView alloc] initFrame:&iconViewRect];
+	
+        if ( !iconView ) {
+            PRINT_LOG(self,"Can't alloc an instance of 'IconView' class");
+            return self ;
+        }
+
+        [[appIcon contentView] addSubview:iconView];
+        [iconView setImage:altIconImage] ;
+        [iconView display] ;
+
         if (strcmp(NXGetDefaultValue([NXApp appName],"NXAutoLaunch"),"YES")==0) {
             [NXApp hide:self] ;
         } ;
@@ -287,5 +322,4 @@ void pb_handler(DPSTimedEntry teNumber, double now, void *data) {
     return self ;
 }
 @end
-
 
