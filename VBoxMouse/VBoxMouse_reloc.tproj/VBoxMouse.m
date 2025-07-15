@@ -288,15 +288,16 @@ extern int nodev() ;
     vbox_filter_mask->header.requestType = VBOX_CTL_GUEST_FILETER_MASK;
     vbox_filter_mask->header.rc = -1 ;
     // 0:mouse capability 1:HGCM event  2:display change 9: mouse position
-    vbox_filter_mask->ormask = (1<<0) | (1<<1) | (1<<2) | (1<<9)  ;  
-    vbox_filter_mask->notmask = 0 ;
+    vbox_filter_mask->ormask = (1<<1) | (1<<2) | (1<<9)  ;  
+    vbox_filter_mask->notmask = ~(vbox_filter_mask->ormask) ;
     outl(vbox_port, vbox_filter_mask_phys) ;
 #ifdef DEBUG
     IOLog("rc=%ld CTL_GUEST_FILTER_MASK\n",vbox_filter_mask->header.rc) ;
 #endif
 
-    // enabling all interrupts
-    vbox_vmmdev[3] = 0xFFFFFFFF ;
+    // enabling HGCM, display change, and mouse position events
+    vbox_vmmdev[3] = (1<<1) | (1<<2) | (1<<9) ;
+
     [self enableAllInterrupts] ;
   
     desktopBounds.lock = [NXLock new] ;
@@ -349,6 +350,25 @@ extern int nodev() ;
 	return [super free];
 }
 
+-(void) disableHGCMEvents
+{
+    //
+    // VMMDevReq_CtlGuestFilterMask (42)
+    //
+    vbox_filter_mask->header.size = sizeof(struct vbox_filter_mask) ;
+    vbox_filter_mask->header.version = VBOX_REQUEST_HEADER_VERSION;
+    vbox_filter_mask->header.requestType = VBOX_CTL_GUEST_FILETER_MASK;
+    vbox_filter_mask->header.rc = -1 ;
+    // 0:mouse capability 1:HGCM event  2:display change 9: mouse position
+    vbox_filter_mask->ormask = (1<<0) | (1<<2) | (1<<9)  ;  
+    vbox_filter_mask->notmask = (1<<1) ;
+    outl(vbox_port, vbox_filter_mask_phys) ;
+#ifdef DEBUG
+    IOLog("rc=%ld CTL_GUEST_FILTER_MASK\n",vbox_filter_mask->header.rc) ;
+#endif
+    vbox_vmmdev[3] = vbox_vmmdev[3] & ~(1<<1) ;
+}
+
 - (void)interruptOccurred
 {
     unsigned long events = 0 ;
@@ -387,13 +407,14 @@ extern int nodev() ;
         }
     } else if (events & (1<<1)) { // HGCM event
         if (hgcm_connect->header.flags==1) { // connected to HGCM
+            // [self disableHGCMEvents] ; // no more HGCM events are necessary
             hgcm_connect->header.flags=0 ;
             pbData.client_id = hgcm_connect->client_id ;
             IOLog("VBoxMouse - HGCM client_id= %ld\n",pbData.client_id) ;
             pbData.count = 0 ;
             IOForkThread((IOThreadFunc)pb_thread, &pbData) ;
         } 
-    } else { // mouse pointer changed
+    } else if (events & (1<<9)) { // mouse pointer changed
         vbox_mouse->header.size = sizeof(struct vbox_mouse_absolute_ex) ;
         vbox_mouse->header.version = VBOX_REQUEST_HEADER_VERSION;
         vbox_mouse->header.requestType = VBOX_REQUEST_GET_MOUSE_EX;
@@ -802,11 +823,9 @@ static void pb_thread(struct pb_data *data) {
             if (hgcm_call->params[0].value0 != (1<<0)) continue ; // skip data other than UNICODETEXT
 
             len = hgcm_call->params[2].value0 ;  // actual data length
-            if (len == 0) {
+            if (len == 0 || len>MAX_BUFFER_LEN) {
                 data->pb_read_buffer_len = 0 ; 
-                continue ; 
-            } else if (len>=MAX_BUFFER_LEN) {
-                len = MAX_BUFFER_LEN-2 ; 
+                continue ; // skip too large data
             }
             [data->lock lock] ;
 #ifdef DEBUG
