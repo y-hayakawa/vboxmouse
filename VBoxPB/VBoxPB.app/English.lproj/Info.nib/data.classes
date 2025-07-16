@@ -1,0 +1,16 @@
+FirstResponder = {ACTIONS = {}; SUPERCLASS = Object; };
+VBoxPB = {
+    ACTIONS = {
+	"appDidInit:" = "appDidInit:"; 
+	"showInfo:" = "showInfo:"; 
+	"startTE:" = "startTE:"; 
+	"stopTE:" = "stopTE:"; 
+    }; 
+    OUTLETS = {
+	infoPanel = infoPanel; 
+	statusScrollView = statusScrollView; 
+	text = text; 
+	window = window; 
+    }; 
+    SUPERCLASS = Object; 
+};

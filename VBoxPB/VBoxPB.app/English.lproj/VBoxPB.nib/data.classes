@@ -1,0 +1,36 @@
+MoneyConverter = {
+    ACTIONS = {"convert:" = "convert:"; }; 
+    OUTLETS = {moneyForm = moneyForm; prefsController = prefsController; }; 
+    SUPERCLASS = Object; 
+};
+FirstResponder = {ACTIONS = {}; SUPERCLASS = Object; };
+VBoxPB = {
+    ACTIONS = {
+	"appDidInit:" = "appDidInit:"; 
+	"showInfo:" = "showInfo:"; 
+	"startTE:" = "startTE:"; 
+	"stopTE:" = "stopTE:"; 
+    }; 
+    OUTLETS = {
+	infoPanel = infoPanel; 
+	statusScrollView = statusScrollView; 
+	text = text; 
+	window = window; 
+    }; 
+    SUPERCLASS = Object; 
+};
+PrefsController = {
+    ACTIONS = {
+	"displayPrefsPanel:" = "displayPrefsPanel:"; 
+	"setTruncate:" = "setTruncate:"; 
+	"showAccessoryView:" = "showAccessoryView:"; 
+    }; 
+    OUTLETS = {
+	popUpButton = popUpButton; 
+	prefsPanel = prefsPanel; 
+	promptSwitch = promptSwitch; 
+	switchView = switchView; 
+	truncateSwitch = truncateSwitch; 
+    }; 
+    SUPERCLASS = Object; 
+};

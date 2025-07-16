@@ -59,7 +59,7 @@ void PRINT_LOG(void* data, const char *fmt, ...)
 
   ret = [master lookUpByDeviceName:VBMOUSE_DEV_NAME objectNumber:&tag deviceKind:&kind] ;
   if (ret!=0) {
-      PRINT_LOG(self,"Failed to open device %s",VBMOUSE_DEV_NAME);
+      PRINT_LOG(self,"Failed to open device %s",VBOXPB_DEV_PATH);
       return nil ;
   }
 
@@ -106,7 +106,7 @@ void PRINT_LOG(void* data, const char *fmt, ...)
 
 - (void) setMode:(int)mode {
     kanjiMode = mode ;
-    PRINT_LOG(self,"kanjiMode=%d\n",mode) ;
+    PRINT_LOG(self,"KanjiMode=%d\n",mode) ;
 }
 
 - (void)checkNsClipboard {
@@ -199,7 +199,7 @@ void PRINT_LOG(void* data, const char *fmt, ...)
                 // delete null at the tail
                 while (outbuf_len>0 && outbuf[outbuf_len-1]==0) outbuf_len-- ;
 
-                PRINT_LOG(self,"Recieved %d characters from VirtualBox\n",outbuf_len) ;
+                PRINT_LOG(self,"Received %d characters from VirtualBox\n",outbuf_len) ;
 
                 NX_DURING
                     [pboard declareTypes:&NXAsciiPboardType num:1 owner:self];
@@ -209,7 +209,7 @@ void PRINT_LOG(void* data, const char *fmt, ...)
                 NX_HANDLER
                     switch(NXLocalHandler.code) {
                     case NX_pasteboardComm:
-                        PRINT_LOG(self,"PBDaemon: pasteboard comm error\n") ;
+                        PRINT_LOG(self,"Pasteboard comm error\n") ;
                     }
                 NX_ENDHANDLER
                 lastCountNS = [pboard changeCount] ; // don't write back this to VBox
