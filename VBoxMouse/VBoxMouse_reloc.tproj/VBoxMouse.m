@@ -288,7 +288,7 @@ extern int nodev() ;
     vbox_filter_mask->header.requestType = VBOX_CTL_GUEST_FILETER_MASK;
     vbox_filter_mask->header.rc = -1 ;
     // 0:mouse capability 1:HGCM event  2:display change 9: mouse position
-    vbox_filter_mask->ormask = (1<<0) | (1<<1) | (1<<2) | (1<<9)  ;  
+    vbox_filter_mask->ormask = (1<<1) | (1<<2) | (1<<9)  ;  
     vbox_filter_mask->notmask = ~(vbox_filter_mask->ormask) ;
     outl(vbox_port, vbox_filter_mask_phys) ;
 #ifdef DEBUG
@@ -296,7 +296,7 @@ extern int nodev() ;
 #endif
 
     if (vbox_vmmdev[1] == 0) {  // if version 1.03
-        vbox_vmmdev[3] = (1<<0) | (1<<1) | (1<<2) | (1<<9) ;
+        vbox_vmmdev[3] = (1<<1) | (1<<2) | (1<<9) ;
     }
 
     [self enableAllInterrupts] ;
@@ -361,7 +361,7 @@ extern int nodev() ;
     vbox_filter_mask->header.requestType = VBOX_CTL_GUEST_FILETER_MASK;
     vbox_filter_mask->header.rc = -1 ;
     // 0:mouse capability 1:HGCM event  2:display change 9: mouse position
-    vbox_filter_mask->ormask = (1<<0) | (1<<2) | (1<<9)  ;  
+    vbox_filter_mask->ormask = (1<<2) | (1<<9)  ;  
     vbox_filter_mask->notmask = (1<<1) ;
     outl(vbox_port, vbox_filter_mask_phys) ;
 #ifdef DEBUG
