@@ -288,15 +288,14 @@ extern int nodev() ;
     vbox_filter_mask->header.requestType = VBOX_CTL_GUEST_FILETER_MASK;
     vbox_filter_mask->header.rc = -1 ;
     // 0:mouse capability 1:HGCM event  2:display change 9: mouse position
-    vbox_filter_mask->ormask = (1<<1) | (1<<2) | (1<<9)  ;  
+    vbox_filter_mask->ormask = (1<<0) | (1<<1) | (1<<2) | (1<<9)  ;  
     vbox_filter_mask->notmask = ~(vbox_filter_mask->ormask) ;
     outl(vbox_port, vbox_filter_mask_phys) ;
 #ifdef DEBUG
     IOLog("rc=%ld CTL_GUEST_FILTER_MASK\n",vbox_filter_mask->header.rc) ;
 #endif
 
-    // enabling HGCM, display change, and mouse position events
-    vbox_vmmdev[3] = (1<<1) | (1<<2) | (1<<9) ;
+    vbox_vmmdev[3] = 0xFFFFFFFF ;
 
     [self enableAllInterrupts] ;
   
@@ -366,7 +365,6 @@ extern int nodev() ;
 #ifdef DEBUG
     IOLog("rc=%ld CTL_GUEST_FILTER_MASK\n",vbox_filter_mask->header.rc) ;
 #endif
-    vbox_vmmdev[3] = vbox_vmmdev[3] & ~(1<<1) ;
 }
 
 - (void)interruptOccurred
