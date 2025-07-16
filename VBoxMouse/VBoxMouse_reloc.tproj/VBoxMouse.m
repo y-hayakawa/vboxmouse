@@ -295,7 +295,9 @@ extern int nodev() ;
     IOLog("rc=%ld CTL_GUEST_FILTER_MASK\n",vbox_filter_mask->header.rc) ;
 #endif
 
-    vbox_vmmdev[3] = 0xFFFFFFFF ;
+    if (vbox_vmmdev[1] == 0) {  // if version 1.03
+        vbox_vmmdev[3] = (1<<0) | (1<<1) | (1<<2) | (1<<9) ;
+    }
 
     [self enableAllInterrupts] ;
   
