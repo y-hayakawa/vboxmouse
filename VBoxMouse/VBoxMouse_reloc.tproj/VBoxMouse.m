@@ -46,7 +46,7 @@ extern int nodev() ;
     IOReturn configReturn;			       // Return value from getPCIConfigSpace
 
     IOLog("VBoxMouse - VirtualBox Mouse Adapter Driver\n");
-    IOLog("VBoxMouse - Version 0.92 (built on %s at %s)\n", __DATE__, __TIME__);
+    IOLog("VBoxMouse - Version 0.93 (built on %s at %s)\n", __DATE__, __TIME__);
 
     ret = [VBoxMouse addToCdevswFromDescription: deviceDescription
                      open: (IOSwitchFunc) pb_open

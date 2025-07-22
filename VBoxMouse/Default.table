@@ -1,7 +1,7 @@
 "Title" = "VirtualBox Mouse Adapter";
 "Bus Type" = "PCI";
 "Family" = "Pointing Device";
-"Version" = "0.92";
+"Version" = "0.93";
 "Class Names" = "VBoxMouse";
 "Server Name" = "VBoxMouse";
 "Auto Detect IDs" = "0xcafe80ee";
