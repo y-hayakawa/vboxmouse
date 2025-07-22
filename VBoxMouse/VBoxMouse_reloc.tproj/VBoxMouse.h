@@ -2,7 +2,7 @@
   VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
   (c) 2025, Yoshinori Hayakawa
 
-  Version 0.92 (2025-07-08)
+  Version 0.93 (2025-07-22)
 */
 
 #ifndef __VBOXMOUSE_H__
@@ -29,26 +29,24 @@ struct rect {
     id lock ;
 } ;
 
+
 struct pb_data {
     // buffer for VBox --> NS33
     unsigned char *pb_read_buffer ;
-    unsigned long pb_read_buffer_len ;
-    unsigned int pb_read_buffer_phys ;
+    volatile unsigned long pb_read_buffer_len ;
+    unsigned int pb_read_buffer_phys[NDIV_BUFFER] ;
     // buffer for NS --> VBox
     unsigned char *pb_write_buffer ;
-    unsigned long pb_write_buffer_len ;
-    unsigned int pb_write_buffer_phys ;
-    int pb_got_new_data_to_write ;
+    volatile unsigned long pb_write_buffer_len ;
+    unsigned int pb_write_buffer_phys[NDIV_BUFFER] ;
+    volatile int pb_got_new_data_to_write ;
     long int client_id ;
-    unsigned int count ;
+    volatile unsigned int count ;
     IOEISAPortAddress vbox_port ;
-    volatile BOOL terminate ;
+    BOOL terminate ;
     id lock ;
 } ;
 
-// 64k seems to be the maximum
-// string length in pasteboard is limited up to a half of this number
-#define MAX_BUFFER_LEN 65536
 
 #define CHAR_MAJOR 21
  
@@ -87,9 +85,6 @@ struct pb_data {
     struct hgcm_call * hgcm_call ;
     unsigned int hgcm_call_phys ;
 
-    struct hgcm_call * hgcm_write_call ;
-    unsigned int hgcm_write_call_phys ;
-
     struct hgcm_cancel * hgcm_cancel ;
     unsigned int hgcm_cancel_phys ;
 
@@ -100,6 +95,7 @@ struct pb_data {
 - free;
 - (void)interruptOccurred;
 
+- (void)disableHGCMEvents ;
 - (BOOL)initHGCM ;
 - (BOOL)connectHGCM ;
 - (BOOL)disconnectHGCM ;

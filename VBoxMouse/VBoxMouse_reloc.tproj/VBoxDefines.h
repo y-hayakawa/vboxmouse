@@ -21,6 +21,13 @@
 #define MOUSE_BUTTON_RIGHT  0x0002
 #define MOUSE_BUTTON_MIDDLE 0x0004
 
+
+// string length in pasteboard is limited up to a half of this number
+#define VBOX_PAGE_SIZE 4096
+#define MAX_BUFFER_LEN 65536
+// NDIV_BUFFER = MAX_BUFFER_LEN / VBOX_PAGE_SIZE
+#define NDIV_BUFFER 16
+
 struct vbox_header {
     unsigned long size;
     unsigned long version ;
@@ -158,7 +165,7 @@ struct page_list_info {
     unsigned int flags ;  // direction 1:to_host 2:from_guest 3:both
     unsigned short offset ; // bytes from the top of "struct hgcm_call" to "struct page_list_info"
     unsigned short cpages ;
-    unsigned long long pages[1] ;
+    unsigned long long pages[NDIV_BUFFER] ; 
 } ;
 
 struct hgcm_call {

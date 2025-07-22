@@ -2,7 +2,7 @@
   VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
   (c) 2025, Yoshinori Hayakawa
 
-  Version 0.92 (2025-07-08)
+  Version 0.93 (2025-07-22)
 */
 
 #import <driverkit/i386/IOPCIDeviceDescription.h>
@@ -247,12 +247,6 @@ extern int nodev() ;
     vbox_display_change2->header.rc = -1 ;
     vbox_display_change2->event_ack = 0 ;
 
-    ///
-    [self setName:VBMOUSE_DEV_NAME] ;
-    [self setDeviceKind:"VBoxMouse"] ;
-    [self registerDevice];
-    ///
-
     //
     // VMMDevReq_ReportGuestStatus (59)
     //
@@ -305,11 +299,6 @@ extern int nodev() ;
 
     [self readConfigTable:[deviceDescription configTable]];
 
-    if ([self startIOThread] != IO_R_SUCCESS) {
-        IOLog("VBoxMouse - Cannot start IOThread...\n") ;
-        return NO ;
-    }
-
     IOScheduleFunc((IOThreadFunc) timer_callback, &desktopBounds, 1) ;
 
     pbData.lock = [NXLock new] ;
@@ -321,6 +310,17 @@ extern int nodev() ;
         ret = [self connectHGCM] ;
     }
 
+    ///
+    [self setName:VBMOUSE_DEV_NAME] ;
+    [self setDeviceKind:"VBoxMouse"] ;
+    [self registerDevice];
+    ///
+
+    if ([self startIOThread] != IO_R_SUCCESS) {
+        IOLog("VBoxMouse - Cannot start IOThread...\n") ;
+        return NO ;
+    }
+
     IOLog ("VBoxMouse - Initialization successfully done\n");
 
     return YES;
@@ -329,8 +329,10 @@ extern int nodev() ;
 - free {
 	IOLog("VBoxMouse - Cleaning up\n");
 
+
 	[pbData.lock unlock] ;
 	pbData.terminate = YES ;
+	[pbData.lock free] ;
 
 	[desktopBounds.lock unlock] ;
 
@@ -407,11 +409,12 @@ extern int nodev() ;
         }
     } else if (events & (1<<1)) { // HGCM event
         if (hgcm_connect->header.flags==1) { // connected to HGCM
-            // [self disableHGCMEvents] ; // no more HGCM events are necessary
+            [self disableHGCMEvents] ; // no more HGCM events are necessary
             hgcm_connect->header.flags=0 ;
             pbData.client_id = hgcm_connect->client_id ;
             IOLog("VBoxMouse - HGCM client_id= %ld\n",pbData.client_id) ;
             pbData.count = 0 ;
+            pbData.terminate = NO ;
             IOForkThread((IOThreadFunc)pb_thread, &pbData) ;
         } 
     } else if (events & (1<<9)) { // mouse pointer changed
@@ -427,12 +430,13 @@ extern int nodev() ;
 
         outl(vbox_port, vbox_mouse_phys);
 
-        if (target != nil) {
+        if (target != nil && vbox_mouse->header.rc==0) {
             [desktopBounds.lock lock] ;
             vbox_mouse->x = (vbox_mouse->x * desktopBounds.width / 65535) + desktopBounds.x ;
             vbox_mouse->y = (vbox_mouse->y * desktopBounds.height / 65535) + desktopBounds.y ;
             [desktopBounds.lock unlock] ;
             [target processVBoxMouseInput: vbox_mouse] ; // target is defined in PCPointer.h
+
         }
     }
 
@@ -442,32 +446,39 @@ extern int nodev() ;
 
 - (BOOL) initHGCM
 {
-    int ret ;
+    int i,ret ;
 
-    // need to use low memory to get a continuous range
-    pbData.pb_read_buffer = (char *) IOMallocLow(MAX_BUFFER_LEN) ;
+    pbData.pb_read_buffer = (char *) IOMalloc(MAX_BUFFER_LEN) ;
     if (pbData.pb_read_buffer == NULL) {
         IOLog("VBoxMouse - Can\'t allocate read buffer\n") ;
         return NO ;
     }
-    ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) pbData.pb_read_buffer, &pbData.pb_read_buffer_phys);
-    IOLog("VBoxMouse - PB_READ_BUFFER addr=0x%lx phys=0x%lx\n", pbData.pb_read_buffer, pbData.pb_read_buffer_phys) ;
-    if (ret) {
-        IOLog("VBoxMouse - Can\'t obtain physical address for pb_read_buffer (%s)\n", [IODirectDevice stringFromReturn:ret]) ;
-        return NO;
+    for (i=0 ; i<NDIV_BUFFER; i++) {
+        ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) (pbData.pb_read_buffer + VBOX_PAGE_SIZE*i), &pbData.pb_read_buffer_phys[i]);
+#ifdef DEBUG
+        IOLog("VBoxMouse - PB_READ_BUFFER addr=0x%lx phys=0x%lx\n", pbData.pb_read_buffer +  VBOX_PAGE_SIZE*i, pbData.pb_read_buffer_phys[i]) ;
+#endif
+        if (ret) {
+            IOLog("VBoxMouse - Can\'t obtain physical address for pb_read_buffer (%s)\n", [IODirectDevice stringFromReturn:ret]) ;
+            return NO;
+        }
     }
     pbData.pb_read_buffer_len = 0 ;
 
-    pbData.pb_write_buffer = (char *) IOMallocLow(MAX_BUFFER_LEN) ;
+    pbData.pb_write_buffer = (char *) IOMalloc(MAX_BUFFER_LEN) ;
     if (pbData.pb_write_buffer == NULL) {
         IOLog("VBoxMouse - Can\'t allocate write buffer\n") ;
         return NO ;
     }
-    ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) pbData.pb_write_buffer, &pbData.pb_write_buffer_phys);
-    IOLog("VBoxMouse - PB_WRITE_BUFFER addr=0x%lx phys=0x%lx\n", pbData.pb_write_buffer, pbData.pb_write_buffer_phys) ;
-    if (ret) {
-        IOLog("VBoxMouse - Can\'t obtain physical address for pb_write_buffer (%s)\n", [IODirectDevice stringFromReturn:ret]) ;
-        return NO;
+    for (i=0 ; i<NDIV_BUFFER; i++) {
+        ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) (pbData.pb_write_buffer + VBOX_PAGE_SIZE*i), &pbData.pb_write_buffer_phys[i]);
+#ifdef DEBUG
+        IOLog("VBoxMouse - PB_WRITE_BUFFER addr=0x%lx phys=0x%lx\n", pbData.pb_write_buffer+ VBOX_PAGE_SIZE*i, pbData.pb_write_buffer_phys[i]) ;
+#endif
+        if (ret) {
+            IOLog("VBoxMouse - Can\'t obtain physical address for pb_write_buffer (%s)\n", [IODirectDevice stringFromReturn:ret]) ;
+            return NO;
+        }
     }
     pbData.pb_write_buffer_len = 0 ;
 
@@ -492,13 +503,6 @@ extern int nodev() ;
     ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) hgcm_call, &hgcm_call_phys);
     if (ret) {
         IOLog("VBoxMouse - Can\'t obtain physical address for hgcm_call (%s)\n", [IODirectDevice stringFromReturn:ret]) ;
-        return NO;
-    }
-
-    hgcm_write_call = IOMalloc(sizeof(struct hgcm_call)) ;
-    ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) hgcm_write_call, &hgcm_write_call_phys);
-    if (ret) {
-        IOLog("VBoxMouse - Can\'t obtain physical address for hgcm_write_call (%s)\n", [IODirectDevice stringFromReturn:ret]) ;
         return NO;
     }
 
@@ -563,8 +567,8 @@ extern int nodev() ;
     int ret ;
     if (pbData.client_id >=0 ) ret = [self disconnectHGCM] ;
 
-    IOFreeLow(pbData.pb_read_buffer,MAX_BUFFER_LEN) ;
-    IOFreeLow(pbData.pb_write_buffer,MAX_BUFFER_LEN) ;
+    IOFree(pbData.pb_read_buffer,MAX_BUFFER_LEN) ;
+    IOFree(pbData.pb_write_buffer,MAX_BUFFER_LEN) ;
     IOFree(hgcm_connect, sizeof(struct hgcm_connect)) ;
     IOFree(hgcm_disconnect, sizeof(struct hgcm_disconnect)) ;
     IOFree(hgcm_call, sizeof(hgcm_call)) ;
@@ -643,11 +647,9 @@ extern int nodev() ;
         return [super getIntValues:array forParameter:parameter count:count];
     }
 
-    [pbData.lock lock] ;
     array[0] = pbData.count ;
     array[1] = buffer_length_allocated ;
     *count = 2 ;
-    [pbData.lock unlock] ;
 
     return 0 ;
 }
@@ -672,7 +674,7 @@ static void pb_thread(struct pb_data *data) {
     struct hgcm_call *hgcm_call ;
     unsigned int hgcm_call_phys ;
     unsigned int msg_id, msg_fmt ;
-    int ret,len,cnt,nloop ;
+    int i,ret,len,cnt,nloop ;
 
     hgcm_call = IOMalloc(sizeof(struct hgcm_call)) ;
     ret = IOPhysicalFromVirtual(IOVmTaskSelf(), (vm_address_t) hgcm_call, &hgcm_call_phys);
@@ -701,7 +703,8 @@ static void pb_thread(struct pb_data *data) {
             cnt=0 ;
             do {
                 IOSleep(10) ; 
-            } while(hgcm_call->header.flags == 0 && cnt++<10) ;
+            } while(hgcm_call->header.flags == 0 && cnt++<50) ;
+
             if (hgcm_call->header.header.rc >=0) {
                 [data->lock lock] ;
                 data->pb_write_buffer_len = data->pb_got_new_data_to_write ;
@@ -731,8 +734,8 @@ static void pb_thread(struct pb_data *data) {
         outl(data->vbox_port, hgcm_call_phys);
         cnt=0 ;
         do {
-            IOSleep(200) ; // 200m sec
-        } while(hgcm_call->header.flags == 0 && cnt++<5) ;
+            IOSleep(250) ; // 250 ms
+        } while(hgcm_call->header.flags == 0 && cnt++<4) ;
 
         if (hgcm_call->header.header.rc < 0) continue ;
 
@@ -772,8 +775,8 @@ static void pb_thread(struct pb_data *data) {
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(10) ; // 10m sec
-            } while(hgcm_call->header.flags == 0 && cnt++<100) ;
+                IOSleep(10) ;
+            } while(hgcm_call->header.flags == 0 && cnt++<50) ;
 #ifdef DEBUG
             IOLog("pb_thread(FN_MSG_GET 3): rc=%ld flag=%ld result=%ld p0=%ld p1=%ld cnt=%ld\n",
                   hgcm_call->header.header.rc, hgcm_call->header.flags, hgcm_call->header.result, 
@@ -797,21 +800,23 @@ static void pb_thread(struct pb_data *data) {
             hgcm_call->params[0].type = 1 ;        // 32bit value
             hgcm_call->params[0].value0 = msg_fmt ; // UNICODETEXT   
             hgcm_call->params[0].value1 = 0 ;
-            hgcm_call->params[1].type = 12 ;        // 3:phys addrr(deprecated), 10:page list  12:contiguous pagelist
+            hgcm_call->params[1].type = 10 ;        // 3:phys addrr(deprecated), 10:page list  12:contiguous pagelist
             hgcm_call->params[1].value0 = MAX_BUFFER_LEN ;   
             hgcm_call->params[1].value1 = PAGE_LIST_INFO_OFFSET32 ;
             hgcm_call->params[2].type = 1 ;        // 32bit value
             hgcm_call->params[2].value0 = 0 ;      // length will be returened
             hgcm_call->params[2].value1 = 0 ;
-            hgcm_call->page_list_info.flags = 3 ;
+            hgcm_call->page_list_info.flags = 2 ; // DIRECTION_FROM_HOST
             hgcm_call->page_list_info.offset = 0 ;
-            hgcm_call->page_list_info.cpages = 1 ;
-            hgcm_call->page_list_info.pages[0] = data->pb_read_buffer_phys ;
+            hgcm_call->page_list_info.cpages = NDIV_BUFFER ;
+            for (i=0; i<NDIV_BUFFER; i++)
+                hgcm_call->page_list_info.pages[i] = data->pb_read_buffer_phys[i] ;
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(20) ; // 20m sec
+                IOSleep(10) ; 
             } while(hgcm_call->header.flags == 0 && ++cnt<50) ;
+
 #ifdef DEBUG
             IOLog("pb_thread(FN_DATA_READ): rc=%ld res=%ld p0=%ld p1=%ld p2=%ld cnt=%d\n",
                   hgcm_call->header.header.rc, hgcm_call->header.result, 
@@ -855,8 +860,9 @@ static void pb_thread(struct pb_data *data) {
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(10) ; // 10m sec
-            } while(hgcm_call->header.flags == 0 && cnt++<100) ;
+                IOSleep(10) ; 
+            } while(hgcm_call->header.flags == 0 && cnt++<50) ;
+
 #ifdef DEBUG
             IOLog("pb_thread(FN_MSG_GET 2): rc=%ld p0=%ld p1=%ld\n",
                   hgcm_call->header.header.rc, hgcm_call->params[0].value0, hgcm_call->params[1].value0) ;
@@ -866,6 +872,7 @@ static void pb_thread(struct pb_data *data) {
             msg_fmt = hgcm_call->params[1].value0 ;
 
             if (data->pb_write_buffer_len > 0 && (msg_fmt & (1<<0))) {
+
                 hgcm_call->header.header.size = SIZEOF_HGCM_CALL32_WITH_PAGE_LIST_INFO ;
                 hgcm_call->header.header.version = VBOX_REQUEST_HEADER_VERSION;
                 hgcm_call->header.header.requestType = VBOX_REQUEST_HGCM_CALL32 ;
@@ -877,25 +884,26 @@ static void pb_thread(struct pb_data *data) {
                 hgcm_call->params[0].type = 1 ;        // 32bit value
                 hgcm_call->params[0].value0 = (1<<0) ; // UNICODE TEXT
                 hgcm_call->params[0].value1 = 0 ;
-                hgcm_call->params[1].type = 12 ;        // 3:phys addr(deprecated), 10:page list  12:contiguous page list
+                hgcm_call->params[1].type = 10 ;        // 3:phys addr(deprecated), 10:page list  12:contiguous page list
                 hgcm_call->params[1].value0 = data->pb_write_buffer_len ;
                 hgcm_call->params[1].value1 = PAGE_LIST_INFO_OFFSET32 ;
-                hgcm_call->page_list_info.flags = 3 ;
+                hgcm_call->page_list_info.flags = 1 ; // DIRECTION_TO_HOST
                 hgcm_call->page_list_info.offset = 0 ;
-                hgcm_call->page_list_info.cpages = 1 ;
-                hgcm_call->page_list_info.pages[0] = data->pb_write_buffer_phys ;
-                [data->lock lock] ;
+                hgcm_call->page_list_info.cpages = NDIV_BUFFER ;
+                for (i=0; i<NDIV_BUFFER; i++) 
+                    hgcm_call->page_list_info.pages[i] = data->pb_write_buffer_phys[i] ;
                 outl(data->vbox_port, hgcm_call_phys);
                 cnt=0 ;
                 do {
-                    IOSleep(10) ; // 10m sec
-                } while(hgcm_call->header.flags == 0 && cnt++<100) ;
-                [data->lock unlock] ;
+                    IOSleep(10) ;
+                } while(hgcm_call->header.flags == 0 && cnt++<50) ;
 #ifdef DEBUG
                 IOLog("pb_thread(FN_DATA_WRITE): rc=%ld p0=%ld p1=%ld cnt=%ld\n",
                       hgcm_call->header.header.rc, hgcm_call->params[0].value0, hgcm_call->params[1].value0,cnt) ;
 #endif
+                [data->lock lock] ;
                 data->pb_write_buffer_len = 0 ; // sent
+                [data->lock unlock] ;
             } 
             ; 
         } else if (msg_id == VBOX_SHCL_HOST_MSG_QUIT ) {
