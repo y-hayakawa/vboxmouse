@@ -33,6 +33,7 @@ static void timer_callback(struct rect *rect) ;
 IOPCIConfigSpace pciConfig;				// PCI Configuration
 struct pb_data pbData;
 static int buffer_length_allocated = 0 ; 
+int irq_levels[2] ;
 
 extern int pb_open() ;
 extern int pb_read() ;
@@ -73,7 +74,7 @@ static BOOL             seqBeingProcessed;
     if (ret != YES) {
         IOLog("VBoxMouse - Failed to add CDEVSW\n");
     } else {
-        IOLog("VBoxMouse - Character major number = %ld\n",[VBoxMouse characterMajor]) ;
+        IOLog("VBoxMouse - Character major number= %d\n",[VBoxMouse characterMajor]) ;
     }
 
     // Get the PCI configuration
@@ -96,8 +97,6 @@ static BOOL             seqBeingProcessed;
     }
     IOLog ("VBoxMouse - PCI Vendor: '%04x' Device: '%04x'\n", pciConfig.DeviceID, pciConfig.VendorID);
 
-    IOLog ("VBoxMouse - Initializing...\n");
-
     ret = IOGetObjectForDeviceName("PS2Controller", &ps2Ctrl);
     if (ret != IO_R_SUCCESS) {
             IOLog("VBoxMouse -  Can't find PS2Controller (%s)\n", [self stringFromReturn:ret]);
@@ -105,8 +104,10 @@ static BOOL             seqBeingProcessed;
     } 
 
     irqlevel = (unsigned int) pciConfig.InterruptLine;
-    IOLog("VBoxMouse - IRQ=%ld\n",irqlevel) ;
-    ret = [deviceDescription setInterruptList:&irqlevel num:1];
+    IOLog("VBoxMouse - VMMDev IRQ=%d\n",irqlevel) ;
+    irq_levels[0]=irqlevel;
+    irq_levels[1]=12 ; // PS2 mouse
+    ret = [deviceDescription setInterruptList:irq_levels num:2];
     if(ret)
         {
             IOLog("VBoxMouse - Can\'t set interruptList to IRQ %d (%s)\n", irqlevel,[IODirectDevice stringFromReturn:ret]) ;
@@ -308,8 +309,6 @@ static BOOL             seqBeingProcessed;
     if (vbox_vmmdev[1] == 0) {  // if version 1.03
         vbox_vmmdev[3] = (1<<1) | (1<<2) | (1<<9) ;
     }
-
-    [self enableAllInterrupts] ;
   
     desktopBounds.lock = [NXLock new] ;
 
@@ -333,6 +332,12 @@ static BOOL             seqBeingProcessed;
     ///
 
     if (![self initPS2Controller:ps2Ctrl]) return NO ;
+
+    ret = [self enableAllInterrupts] ;
+    if (ret != IO_R_SUCCESS) {
+        IOLog("VBoxMouse - Some of interrupts cannot be enabled...\n") ;
+        return NO ;
+    }
 
     if ([self startIOThread] != IO_R_SUCCESS) {
         IOLog("VBoxMouse - Cannot start IOThread...\n") ;
@@ -472,11 +477,16 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
     return;
 } 
 
+// 0: IRQ 11: VMMDev 
+// 1: IRQ 12: PS/2 Mouse
+
 - (BOOL)getHandler:(IOInterruptHandler *)handler level:(unsigned int *)ipl argument:(unsigned int *)arg forInterrupt:(unsigned int)localInterrupt
 {
+
     if (localInterrupt==1) { // PS2 Mouse
         *handler = PS2MouseIntHandler;
         *ipl = IPLDEVICE;
+        IOLog("VBoxMouse - Interrupt handler for PS/2 events has been registered\n") ;
         return YES;
     } else {
         return NO ;
@@ -487,31 +497,30 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
 /* =================================================================== */
 
 - free {
-	IOLog("VBoxMouse - Cleaning up\n");
+    IOLog("VBoxMouse - Cleaning up\n");
 
-
-	[pbData.lock unlock] ;
-	pbData.terminate = YES ;
+    [pbData.lock unlock] ;
+    pbData.terminate = YES ;
     IOSleep(300) ; // 300 ms
-	[pbData.lock free] ;
+    [pbData.lock free] ;
 
-	[desktopBounds.lock unlock] ;
+    [desktopBounds.lock unlock] ;
 
-	IOUnscheduleFunc((IOThreadFunc)timer_callback, &desktopBounds) ;
+    IOUnscheduleFunc((IOThreadFunc)timer_callback, &desktopBounds) ;
 
-	[desktopBounds.lock free] ;
+    [desktopBounds.lock free] ;
 
-	IOFree(vbox_mouse, sizeof(struct vbox_mouse_absolute_ex));
-	IOFree(guest_info, sizeof(struct vbox_guest_info));
-	IOFree(vbox_ack, sizeof(struct vbox_ack_events));
-	IOFree(vbox_guest_caps, sizeof(struct vbox_guest_caps));
-	IOFree(vbox_guest_status, sizeof(struct vbox_guest_status)) ;
-	IOFree(vbox_filter_mask, sizeof(struct vbox_filter_mask));
-	IOFree(vbox_display_change2, sizeof(struct vbox_display_change2));
+    IOFree(vbox_mouse, sizeof(struct vbox_mouse_absolute_ex));
+    IOFree(guest_info, sizeof(struct vbox_guest_info));
+    IOFree(vbox_ack, sizeof(struct vbox_ack_events));
+    IOFree(vbox_guest_caps, sizeof(struct vbox_guest_caps));
+    IOFree(vbox_guest_status, sizeof(struct vbox_guest_status)) ;
+    IOFree(vbox_filter_mask, sizeof(struct vbox_filter_mask));
+    IOFree(vbox_display_change2, sizeof(struct vbox_display_change2));
 
-	[self freeHGCM] ;
+    [self freeHGCM] ;
 
-	return [super free];
+    return [super free];
 }
 
 -(void) disableHGCMEvents
@@ -533,8 +542,6 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
 }
 
 
-// 0: IRQ 11: VMMDev 
-// 1: IRQ 12: PS/2 Mouse
 - (void)interruptOccurredAt:(int)localInterrupt 
 {
     unsigned long events = 0 ;
@@ -803,7 +810,13 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
     else desktopBounds.height = VBM_DEF_YSIZE;
     [desktopBounds.lock unlock] ;
 
-    IOLog("VBoxMouse - Config: w=%d h=%d xofs=%d yofs=%d\n",desktopBounds.width,desktopBounds.height,desktopBounds.x,desktopBounds.y) ;
+
+    IOLog("VBoxMouse - Config: W=%d H=%d Xofs=%d Yofs=%d\n",desktopBounds.width,desktopBounds.height,desktopBounds.x,desktopBounds.y) ;
+
+#ifdef DEBUG
+    value = (char *) [configTable valueForStringKey:"IRQ Levels"] ;
+    IOLog("VBoxMouse - Config: IRQ Levels= %s\n",value) ;
+#endif
     
     return success;
 }
