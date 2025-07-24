@@ -2,7 +2,7 @@
   VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
   (c) 2025, Yoshinori Hayakawa
 
-  Version 0.93 (2025-07-22)
+  Version 0.94 (2025-07-24)
 */
 
 #ifndef __VBOXMOUSE_H__
@@ -88,12 +88,20 @@ struct pb_data {
     struct hgcm_cancel * hgcm_cancel ;
     unsigned int hgcm_cancel_phys ;
 
+    id controller;
+
     struct rect desktopBounds;      
 }
 
 - (BOOL)mouseInit: deviceDescription;
+
+- (BOOL)initPS2Controller:aPS2Controller;
+- (BOOL)isPS2MousePresent;
+- (void)resetPS2Mouse;
+- (BOOL)getHandler:(IOInterruptHandler *)handler level:(unsigned int *)ipl argument:(unsigned int *)arg forInterrupt:(unsigned int)localInterrupt;
+
 - free;
-- (void)interruptOccurred;
+- (void)interruptOccurredAt:(int)localInterrupt;
 
 - (void)disableHGCMEvents ;
 - (BOOL)initHGCM ;

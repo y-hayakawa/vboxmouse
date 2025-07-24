@@ -2,7 +2,7 @@
   VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
   (c) 2025, Yoshinori Hayakawa
 
-  Version 0.93 (2025-07-22)
+  Version 0.94 (2025-07-24)
 */
 
 #import <driverkit/i386/IOPCIDeviceDescription.h>
@@ -15,6 +15,10 @@
 #import <driverkit/eventProtocols.h>
 #import <kernserv/i386/spl.h>
 #import <kernserv/prototypes.h>
+
+#import <PS2Controller.h>
+#import <PS2Proto.h>
+
 #import <mach/vm_param.h>
 
 #import <sys/conf.h>
@@ -36,6 +40,11 @@ extern int pb_write() ;
 extern int nulldev() ;
 extern int nodev() ;
 
+static t_ps2_funcs      *ps2Funcs=NULL;
+static ns_time_t        lastTime;
+static int              indexInSequence;
+static BOOL             seqBeingProcessed;
+
 #undef DEBUG
 
 @implementation VBoxMouse
@@ -44,9 +53,10 @@ extern int nodev() ;
     IOReturn ret ;
     unsigned long *basePtr = 0 ;
     IOReturn configReturn;			       // Return value from getPCIConfigSpace
+    id ps2Ctrl = nil ;
 
     IOLog("VBoxMouse - VirtualBox Mouse Adapter Driver\n");
-    IOLog("VBoxMouse - Version 0.93 (built on %s at %s)\n", __DATE__, __TIME__);
+    IOLog("VBoxMouse - Version 0.94 (built on %s at %s)\n", __DATE__, __TIME__);
 
     ret = [VBoxMouse addToCdevswFromDescription: deviceDescription
                      open: (IOSwitchFunc) pb_open
@@ -87,6 +97,12 @@ extern int nodev() ;
     IOLog ("VBoxMouse - PCI Vendor: '%04x' Device: '%04x'\n", pciConfig.DeviceID, pciConfig.VendorID);
 
     IOLog ("VBoxMouse - Initializing...\n");
+
+    ret = IOGetObjectForDeviceName("PS2Controller", &ps2Ctrl);
+    if (ret != IO_R_SUCCESS) {
+            IOLog("VBoxMouse -  Can't find PS2Controller (%s)\n", [self stringFromReturn:ret]);
+            return NO;
+    } 
 
     irqlevel = (unsigned int) pciConfig.InterruptLine;
     IOLog("VBoxMouse - IRQ=%ld\n",irqlevel) ;
@@ -316,6 +332,8 @@ extern int nodev() ;
     [self registerDevice];
     ///
 
+    if (![self initPS2Controller:ps2Ctrl]) return NO;
+
     if ([self startIOThread] != IO_R_SUCCESS) {
         IOLog("VBoxMouse - Cannot start IOThread...\n") ;
         return NO ;
@@ -325,6 +343,151 @@ extern int nodev() ;
 
     return YES;
 }
+
+
+/* Note:
+The following code segments that handle PS/2 mouse events:
+ -initPS2Controller:
+ -isPS2MousePresent
+ -resetPS2Mouse
+ PS2MouseIntHandler()
+ are derived from VMMouse.m in the VMMouse project by Jens Heise (2006-2012),
+ with slight modifications.
+*/
+
+- (BOOL)initPS2Controller:aPS2Controller
+{
+    char        data;
+    BOOL        success=YES;
+    
+    /* We need the controller to enable mouse
+       interrupts.                               */
+    if (!aPS2Controller)
+        {
+            IOLog("VBoxMouse - no PS2Controller present\n");
+            return NO;
+        } /* if */
+    
+    /* Get access functions for the ps2 port from
+       controller                                */
+    controller = aPS2Controller;
+    ps2Funcs = [controller controllerAccessFunctions];
+    [controller setManualDataHandling:YES];
+    ps2Funcs->_clearOutputBuffer();
+    
+    /* Try to find a mouse.                      */
+    if ([self isPS2MousePresent])
+        {
+            ps2Funcs->_sendControllerCommand(KC_CMD_READ);
+            data = ps2Funcs->_getKeyboardData();
+
+            /* Enable the mouse and initialize the PS2
+               part                                      */
+            data &= ~M_CB_DISBLE;
+            data |= M_CB_ENBLIRQ;
+
+            ps2Funcs->_sendControllerCommand(KC_CMD_WRITE);
+            ps2Funcs->_sendControllerData(data);
+            [self resetPS2Mouse];
+
+            [controller setMouseObject:self];
+        } 
+    else 
+        {
+            success = NO;
+            IOLog("VBoxMouse - couldn't find a PS2 Mouse!\n");
+        } 
+    
+    [controller setManualDataHandling:NO];
+
+    return success;
+} 
+
+- (BOOL)isPS2MousePresent
+{
+    char        data;
+    
+    ps2Funcs->_sendMouseCommand(M_CMD_SETRES);
+    ps2Funcs->_sendMouseCommand(0x03);
+    ps2Funcs->_sendMouseCommand(M_CMD_GETSTAT);
+    
+    ps2Funcs->_getMouseData();
+    data = ps2Funcs->_getMouseData();
+    ps2Funcs->_getMouseData();
+    
+    return (data == 0x03);
+}
+
+- (void)resetPS2Mouse
+{
+    ps2Funcs->_sendMouseCommand(M_CMD_SETDEF);
+    ps2Funcs->_sendMouseCommand(M_CMD_POLL);
+    
+    return;
+}
+
+/*---------------------------- MouseIntHandler() ----------------------------*\
+ *                                                                             *
+ *       Handle the PS2 interrupt                                              *
+ *                                                                             *
+ \*---------------------------------------------------------------------------*/
+
+static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
+{
+    unsigned char       data;
+    ns_time_t           timeStamp;
+    
+    /* Basic handling of PS2 port to get rid of
+       the mouse data                            */
+    if (!ps2Funcs->_getMouseDataIfPresent(&data))
+        return;
+
+    if (data == 0xaa && indexInSequence == 0)
+        {
+            IOLog("VBoxMouse - PS2Mouse reset");
+            ps2Funcs->_getMouseData();
+            ps2Funcs->_sendMouseCommand(M_CMD_POLL);
+
+            return;
+        }
+    else
+        {
+            IOGetTimestamp(&timeStamp);
+
+            if (indexInSequence != 0 && timeStamp - lastTime > (25*1000*1000))
+                {
+                    indexInSequence = 0;
+                    IOLog("VBoxMouse - PS2Mouse reset after resync");
+                    ps2Funcs->_getMouseData();
+                    ps2Funcs->_sendMouseCommand(M_CMD_POLL);
+            
+                    return;
+                }
+        }
+    
+    lastTime = timeStamp;
+    
+    IOSendInterrupt(identity, state, IO_DEVICE_INTERRUPT_MSG);
+
+    seqBeingProcessed = YES;
+    indexInSequence = 0;
+
+    return;
+} 
+
+- (BOOL)getHandler:(IOInterruptHandler *)handler level:(unsigned int *)ipl argument:(unsigned int *)arg forInterrupt:(unsigned int)localInterrupt
+{
+    if (localInterrupt==12) { // PS2 Mouse
+        *handler = PS2MouseIntHandler;
+        *ipl = IPLDEVICE;
+        return YES;
+    } else {
+        return NO ;
+    }
+} 
+
+
+/* =================================================================== */
 
 - free {
 	IOLog("VBoxMouse - Cleaning up\n");
@@ -371,9 +534,14 @@ extern int nodev() ;
 #endif
 }
 
-- (void)interruptOccurred
+- (void)interruptOccurredAt:(int)localInterrupt 
 {
     unsigned long events = 0 ;
+
+    if (localInterrupt==12) { // PS2 mouse events
+        [self enableAllInterrupts] ;
+        return ;
+    }
 
     if (vbox_vmmdev[2]==0) {
         [self enableAllInterrupts] ;
@@ -669,6 +837,7 @@ static void timer_callback(struct rect *rect) {
     IOScheduleFunc((IOThreadFunc)timer_callback, (void *) rect, 1) ; // 1 sec
 }
 
+#define SLEEP_MS 10
 
 static void pb_thread(struct pb_data *data) {
     struct hgcm_call *hgcm_call ;
@@ -702,7 +871,7 @@ static void pb_thread(struct pb_data *data) {
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(10) ; 
+                IOSleep(SLEEP_MS) ; 
             } while(hgcm_call->header.flags == 0 && cnt++<50) ;
 
             if (hgcm_call->header.header.rc >=0) {
@@ -775,7 +944,7 @@ static void pb_thread(struct pb_data *data) {
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(10) ;
+                IOSleep(SLEEP_MS) ;
             } while(hgcm_call->header.flags == 0 && cnt++<50) ;
 #ifdef DEBUG
             IOLog("pb_thread(FN_MSG_GET 3): rc=%ld flag=%ld result=%ld p0=%ld p1=%ld cnt=%ld\n",
@@ -814,7 +983,7 @@ static void pb_thread(struct pb_data *data) {
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(10) ; 
+                IOSleep(SLEEP_MS) ; 
             } while(hgcm_call->header.flags == 0 && ++cnt<50) ;
 
 #ifdef DEBUG
@@ -860,7 +1029,7 @@ static void pb_thread(struct pb_data *data) {
             outl(data->vbox_port, hgcm_call_phys);
             cnt=0 ;
             do {
-                IOSleep(10) ; 
+                IOSleep(SLEEP_MS) ; 
             } while(hgcm_call->header.flags == 0 && cnt++<50) ;
 
 #ifdef DEBUG
@@ -895,7 +1064,7 @@ static void pb_thread(struct pb_data *data) {
                 outl(data->vbox_port, hgcm_call_phys);
                 cnt=0 ;
                 do {
-                    IOSleep(10) ;
+                    IOSleep(SLEEP_MS) ;
                 } while(hgcm_call->header.flags == 0 && cnt++<50) ;
 #ifdef DEBUG
                 IOLog("pb_thread(FN_DATA_WRITE): rc=%ld p0=%ld p1=%ld cnt=%ld\n",

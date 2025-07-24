@@ -1,3 +1,10 @@
+/*
+  VBoxMouse: VirtualBox Mouse Driver for NEXTSTEP 3.3(Intel)
+  (c) 2025, Yoshinori Hayakawa
+
+  Version 0.94 (2025-07-24)
+*/
+
 #ifndef __VBOX_DEFINES_H__
 #define __VBOX_DEFINES_H__
 
