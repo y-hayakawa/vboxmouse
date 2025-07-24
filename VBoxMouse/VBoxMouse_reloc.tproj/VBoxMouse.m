@@ -101,7 +101,7 @@ static BOOL             seqBeingProcessed;
     ret = IOGetObjectForDeviceName("PS2Controller", &ps2Ctrl);
     if (ret != IO_R_SUCCESS) {
             IOLog("VBoxMouse -  Can't find PS2Controller (%s)\n", [self stringFromReturn:ret]);
-            return NO;
+            return NO ;
     } 
 
     irqlevel = (unsigned int) pciConfig.InterruptLine;
@@ -332,7 +332,7 @@ static BOOL             seqBeingProcessed;
     [self registerDevice];
     ///
 
-    if (![self initPS2Controller:ps2Ctrl]) return NO;
+    if (![self initPS2Controller:ps2Ctrl]) return NO ;
 
     if ([self startIOThread] != IO_R_SUCCESS) {
         IOLog("VBoxMouse - Cannot start IOThread...\n") ;
@@ -353,6 +353,8 @@ The following code segments that handle PS/2 mouse events:
  PS2MouseIntHandler()
  are derived from VMMouse.m in the VMMouse project by Jens Heise (2006-2012),
  with slight modifications.
+ However, it appears that no PS/2 events are generated from the host 
+ while mouse integration is active.
 */
 
 - (BOOL)initPS2Controller:aPS2Controller
@@ -426,12 +428,6 @@ The following code segments that handle PS/2 mouse events:
     return;
 }
 
-/*---------------------------- MouseIntHandler() ----------------------------*\
- *                                                                             *
- *       Handle the PS2 interrupt                                              *
- *                                                                             *
- \*---------------------------------------------------------------------------*/
-
 static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
 {
     unsigned char       data;
@@ -439,6 +435,7 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
     
     /* Basic handling of PS2 port to get rid of
        the mouse data                            */
+
     if (!ps2Funcs->_getMouseDataIfPresent(&data))
         return;
 
@@ -477,7 +474,7 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
 
 - (BOOL)getHandler:(IOInterruptHandler *)handler level:(unsigned int *)ipl argument:(unsigned int *)arg forInterrupt:(unsigned int)localInterrupt
 {
-    if (localInterrupt==12) { // PS2 Mouse
+    if (localInterrupt==1) { // PS2 Mouse
         *handler = PS2MouseIntHandler;
         *ipl = IPLDEVICE;
         return YES;
@@ -495,6 +492,7 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
 
 	[pbData.lock unlock] ;
 	pbData.terminate = YES ;
+    IOSleep(300) ; // 300 ms
 	[pbData.lock free] ;
 
 	[desktopBounds.lock unlock] ;
@@ -534,11 +532,14 @@ static void PS2MouseIntHandler(void *identity, void *state, unsigned int arg)
 #endif
 }
 
+
+// 0: IRQ 11: VMMDev 
+// 1: IRQ 12: PS/2 Mouse
 - (void)interruptOccurredAt:(int)localInterrupt 
 {
     unsigned long events = 0 ;
 
-    if (localInterrupt==12) { // PS2 mouse events
+    if (localInterrupt==1) { // PS2 mouse events (we don't expect this happens..)
         [self enableAllInterrupts] ;
         return ;
     }
