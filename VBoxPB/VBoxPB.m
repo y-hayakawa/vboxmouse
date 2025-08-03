@@ -286,7 +286,7 @@ void pb_handler(DPSTimedEntry teNumber, double now, void *data) {
         [self setMode:MODE_UTF16LE];
         [self startTE:self];
 
-        altIconImage = [NXImage findImageNamed:"altVBoxPB"] ;
+        altIconImage = [NXImage findImageNamed:"altVBoxPB-new"] ;
         if (!altIconImage) {
             PRINT_LOG(self,"Failed to load icon TIFF\n");
             return self;
